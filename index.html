@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chérie Diary • Shared Friends Dashboard</title>
+  <!-- SEO & Meta Tags -->
+  <meta name="description" content="A gorgeous, shared group dashboard themed in soft pink with a memory feed, photo gallery, bucket list, and trip planner.">
+  <meta name="theme-color" content="#FFB7C5">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Background Butterfly Canvas -->
+  <canvas id="butterflyCanvas"></canvas>
+
+  <!-- Background Ambient Glow Elements -->
+  <div class="glow-sphere glow-sphere-1"></div>
+  <div class="glow-sphere glow-sphere-2"></div>
+
+  <!-- App Wrapper -->
+  <div class="app-container">
+    
+    <!-- Top Bar with settings and helper info -->
+    <header class="main-header">
+      <div class="brand-section">
+        <span class="emoji-sticker float-anim">🌸</span>
+        <h1 class="app-title">Chérie Diary</h1>
+        <p class="app-subtitle">our shared memories & beautiful plans</p>
+      </div>
+      
+      <!-- Connection Status & Settings Control -->
+      <div class="header-actions">
+        <div id="supabaseStatus" class="status-indicator offline" title="Supabase offline. Using Local Storage fallback.">
+          <span class="status-dot"></span>
+          <span class="status-text">Local Mode</span>
+        </div>
+        <button id="openSettingsBtn" class="icon-btn" aria-label="Configure Supabase Settings" title="Configure Supabase">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tab Switcher -->
+    <nav class="tab-navbar">
+      <div class="tab-slider-bg"></div>
+      <button class="tab-btn active" data-tab="our-day">
+        <span class="tab-icon">🌸</span> Our Day
+      </button>
+      <button class="tab-btn" data-tab="trip-planner">
+        <span class="tab-icon">✈️</span> Trip Planner
+      </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="tab-content-container">
+      
+      <!-- TAB 1: OUR DAY (Memory Feed) -->
+      <section id="our-day" class="tab-pane active">
+        <div class="feed-header-card glass-panel">
+          <div class="feed-header-info">
+            <h2>Shared Scrapbook</h2>
+            <p>Snap screenshots, candid moments, or cozy stories. Simply tap to add a piece of our day!</p>
+          </div>
+          <button id="triggerAddMemory" class="btn btn-primary">
+            <span>🌸</span> Share a Memory
+          </button>
+        </div>
+
+        <!-- Memories Grid -->
+        <div id="memoriesGrid" class="memories-grid">
+          <!-- Dynamically filled with post cards -->
+        </div>
+
+        <div id="noMemoriesState" class="empty-state-card glass-panel hidden">
+          <div class="empty-emoji">📸</div>
+          <h3>No memories here yet...</h3>
+          <p>Be the first to share a lovely photo or diary entry from your day!</p>
+          <button class="btn btn-secondary trigger-add-memory-fallback">Share a Memory</button>
+        </div>
+      </section>
+
+      <!-- TAB 2: TRIP PLANNER (Bucket List & Itinerary) -->
+      <section id="trip-planner" class="tab-pane">
+        <div class="planner-grid">
+          
+          <!-- Column 1: Bucket List -->
+          <div class="planner-column glass-panel">
+            <div class="column-header">
+              <div class="column-header-title">
+                <span class="sticker-emoji">🍭</span>
+                <h3>Bucket List</h3>
+              </div>
+              <p class="column-desc">Whimsical ideas and cute goals we must achieve together!</p>
+            </div>
+
+            <!-- Add Bucket Item Form -->
+            <form id="bucketForm" class="planner-form">
+              <div class="input-group">
+                <input type="text" id="bucketInput" placeholder="Add a bucket list item..." required maxlength="80">
+                <button type="submit" class="btn-circle" aria-label="Add bucket item">+</button>
+              </div>
+            </form>
+
+            <!-- Bucket List Items -->
+            <ul id="bucketList" class="bucket-list">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+
+          <!-- Column 2: Trip Itinerary -->
+          <div class="planner-column glass-panel">
+            <div class="column-header">
+              <div class="column-header-title">
+                <span class="sticker-emoji">📅</span>
+                <h3>Itinerary & Schedule</h3>
+              </div>
+              <p class="column-desc">Chronological plan for our adventures. Map our golden days!</p>
+            </div>
+
+            <!-- Add Itinerary Item Form -->
+            <form id="itineraryForm" class="planner-form">
+              <div class="form-row">
+                <div class="form-field flex-2">
+                  <label for="itineraryDay">Day / Date</label>
+                  <input type="text" id="itineraryDay" placeholder="e.g., Day 1 (July 18) or Date" required>
+                </div>
+                <div class="form-field flex-1">
+                  <label for="itineraryTime">Time</label>
+                  <input type="text" id="itineraryTime" placeholder="e.g., 2:00 PM" required>
+                </div>
+              </div>
+              <div class="form-field">
+                <label for="itineraryActivity">Activity Details</label>
+                <input type="text" id="itineraryActivity" placeholder="e.g., Cozy coffee date at Cafe Rose" required maxlength="120">
+              </div>
+              <button type="submit" class="btn btn-secondary w-full">Add to Itinerary</button>
+            </form>
+
+            <!-- Timeline -->
+            <div id="itineraryTimeline" class="itinerary-timeline">
+              <!-- Dynamically populated grouped by Day -->
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: ADD MEMORY -->
+  <div id="memoryModal" class="modal-overlay">
+    <div class="modal-container glass-panel animate-pop">
+      <div class="modal-header">
+        <h2>💖 Capture a Moment</h2>
+        <button id="closeMemoryModal" class="close-btn" aria-label="Close Modal">&times;</button>
+      </div>
+      <form id="memoryForm" class="modal-form">
+        
+        <!-- Drag & Drop Area for Image -->
+        <div class="image-upload-area" id="imageUploadArea">
+          <input type="file" id="imageInput" accept="image/*" class="file-input">
+          <div class="upload-placeholder">
+            <div class="upload-icon">📸</div>
+            <p class="upload-title">Choose or drag a photo</p>
+            <p class="upload-subtitle">Tap here to open camera/gallery</p>
+          </div>
+          <div class="preview-container hidden" id="previewContainer">
+            <img src="" alt="Selected Preview" id="imagePreview" class="image-preview">
+            <button type="button" id="removePreviewBtn" class="remove-preview-btn" title="Remove Photo">&times;</button>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="captionInput">Diary Note & Comment</label>
+          <textarea id="captionInput" placeholder="Tell the story behind this photo, or write a dated diary entry here..." rows="4" maxlength="500"></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="cancelMemoryBtn" class="btn btn-text">Cancel</button>
+          <button type="submit" id="saveMemoryBtn" class="btn btn-primary">
+            <span class="spinner hidden" id="saveSpinner"></span>
+            <span class="btn-text-content">Post to Scrapbook</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: SETTINGS (Supabase Configuration) -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-container glass-panel animate-pop settings-modal">
+      <div class="modal-header">
+        <h2>🌸 Supabase Configuration</h2>
+        <button id="closeSettingsModal" class="close-btn" aria-label="Close Settings Modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="settings-desc">Provide your Supabase credentials to persist memories and comments to your shared cloud database. Otherwise, everything is stored locally on your device!</p>
+        
+        <form id="settingsForm">
+          <div class="form-field">
+            <label for="supabaseUrl">Supabase API URL</label>
+            <input type="url" id="supabaseUrl" placeholder="https://xxxxxx.supabase.co" required>
+          </div>
+          <div class="form-field">
+            <label for="supabaseKey">Supabase Anon Key</label>
+            <input type="password" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required>
+          </div>
+          
+          <div class="settings-actions">
+            <button type="button" id="clearSettingsBtn" class="btn btn-text text-danger">Clear Keys</button>
+            <div class="right-actions">
+              <button type="button" id="cancelSettingsBtn" class="btn btn-text">Close</button>
+              <button type="submit" class="btn btn-primary">Save & Connect</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="sql-instructions">
+          <h4>💡 Setup SQL code for Supabase:</h4>
+          <p>Run the following script in the <strong>SQL Editor</strong> of your Supabase dashboard:</p>
+          <pre><code>-- Create a public table
+create table posts (
+  id uuid default gen_random_uuid() primary key,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  text_content text,
+  image_url text
+);
+
+-- Enable RLS and allow public access
+alter table posts enable row level security;
+create policy "Allow public read" on posts for select using (true);
+create policy "Allow public insert" on posts for insert with check (true);
+
+-- IMPORTANT: Create a Storage bucket named 'memories' and set it to Public!
+-- Add bucket policies allowing public READ and INSERT.</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase client JS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Main Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
