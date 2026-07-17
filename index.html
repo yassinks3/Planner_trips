@@ -36,13 +36,9 @@
         <p class="app-subtitle">our shared memories & beautiful plans</p>
       </div>
       
-      <!-- Connection Status & Settings Control -->
+      <!-- Theme & Settings Control -->
       <div class="header-actions">
-        <div id="supabaseStatus" class="status-indicator offline" title="Supabase offline. Using Local Storage fallback.">
-          <span class="status-dot"></span>
-          <span class="status-text">Local Mode</span>
-        </div>
-        <button id="openSettingsBtn" class="icon-btn" aria-label="Configure Supabase Settings" title="Configure Supabase">
+        <button id="openSettingsBtn" class="icon-btn" aria-label="Configure Theme Settings" title="Customize Theme">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
@@ -132,12 +128,12 @@
             <form id="itineraryForm" class="planner-form">
               <div class="form-row">
                 <div class="form-field flex-2">
-                  <label for="itineraryDay">Day / Date</label>
-                  <input type="text" id="itineraryDay" placeholder="e.g., Day 1 (July 18) or Date" required>
+                  <label for="itineraryDay">Date</label>
+                  <input type="date" id="itineraryDay" required>
                 </div>
                 <div class="form-field flex-1">
                   <label for="itineraryTime">Time</label>
-                  <input type="text" id="itineraryTime" placeholder="e.g., 2:00 PM" required>
+                  <input type="time" id="itineraryTime" required>
                 </div>
               </div>
               <div class="form-field">
@@ -194,57 +190,37 @@
             <span class="btn-text-content">Post to Scrapbook</span>
           </button>
         </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL: SETTINGS (Supabase Configuration) -->
+     <!-- MODAL: SETTINGS (Girly Theme Swatch Switcher) -->
   <div id="settingsModal" class="modal-overlay">
     <div class="modal-container glass-panel animate-pop settings-modal">
       <div class="modal-header">
-        <h2>🌸 Supabase Configuration</h2>
+        <h2>🌸 Chérie Customizer</h2>
         <button id="closeSettingsModal" class="close-btn" aria-label="Close Settings Modal">&times;</button>
       </div>
       <div class="modal-body">
-        <p class="settings-desc">Provide your Supabase credentials to persist memories and comments to your shared cloud database. Otherwise, everything is stored locally on your device!</p>
+        <p class="settings-desc">Choose a girly aesthetic theme color to dynamically recolor our shared group scrapbook and diary!</p>
         
-        <form id="settingsForm">
-          <div class="form-field">
-            <label for="supabaseUrl">Supabase API URL</label>
-            <input type="url" id="supabaseUrl" placeholder="https://xxxxxx.supabase.co" required>
-          </div>
-          <div class="form-field">
-            <label for="supabaseKey">Supabase Anon Key</label>
-            <input type="password" id="supabaseKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required>
-          </div>
-          
-          <div class="settings-actions">
-            <button type="button" id="clearSettingsBtn" class="btn btn-text text-danger">Clear Keys</button>
-            <div class="right-actions">
-              <button type="button" id="cancelSettingsBtn" class="btn btn-text">Close</button>
-              <button type="submit" class="btn btn-primary">Save & Connect</button>
-            </div>
-          </div>
-        </form>
+        <div class="theme-selector">
+          <button class="theme-swatch active" data-theme="soft-rose">
+            <span class="swatch-preview" style="background: linear-gradient(135deg, #FFF0F5, #FFE4E1); border: 2px solid #FFB7C5;"></span>
+            <span class="swatch-name">Soft Rose</span>
+          </button>
+          <button class="theme-swatch" data-theme="lavender-mist">
+            <span class="swatch-preview" style="background: linear-gradient(135deg, #F5F0FF, #EADCF8); border: 2px solid #D3B7FF;"></span>
+            <span class="swatch-name">Lavender Mist</span>
+          </button>
+          <button class="theme-swatch" data-theme="pastel-peach">
+            <span class="swatch-preview" style="background: linear-gradient(135deg, #FFF8F0, #FEEAD8); border: 2px solid #FFCCB7;"></span>
+            <span class="swatch-name">Pastel Peach</span>
+          </button>
+          <button class="theme-swatch" data-theme="creamy-pink">
+            <span class="swatch-preview" style="background: linear-gradient(135deg, #FFF5F6, #FFDFE2); border: 2px solid #FFAEC9;"></span>
+            <span class="swatch-name">Creamy Pink</span>
+          </button>
+        </div>
 
-        <div class="sql-instructions">
-          <h4>💡 Setup SQL code for Supabase:</h4>
-          <p>Run the following script in the <strong>SQL Editor</strong> of your Supabase dashboard:</p>
-          <pre><code>-- Create a public table
-create table posts (
-  id uuid default gen_random_uuid() primary key,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  text_content text,
-  image_url text
-);
-
--- Enable RLS and allow public access
-alter table posts enable row level security;
-create policy "Allow public read" on posts for select using (true);
-create policy "Allow public insert" on posts for insert with check (true);
-
--- IMPORTANT: Create a Storage bucket named 'memories' and set it to Public!
--- Add bucket policies allowing public READ and INSERT.</code></pre>
+        <div class="modal-footer" style="margin-top: 32px; border-top: 1px dashed rgba(255, 180, 195, 0.4); padding-top: 20px;">
+          <button type="button" id="closeSettingsModalBtn" class="btn btn-primary">Done</button>
         </div>
       </div>
     </div>

@@ -48,11 +48,61 @@ const MOCK_BUCKET_ITEMS = [
 ];
 
 const MOCK_ITINERARY_ITEMS = [
-  { id: 'i-1', day: 'Day 1 (Arrival)', time: '02:00 PM', activity: '🎀 Check-in to our cozy rose-themed villa' },
-  { id: 'i-2', day: 'Day 1 (Arrival)', time: '06:30 PM', activity: '🍝 Evening pasta dinner & sunset cocktail bar' },
-  { id: 'i-3', day: 'Day 2 (Adventure)', time: '10:00 AM', activity: '🎨 Floral painting workshop under the glass pavilion' },
-  { id: 'i-4', day: 'Day 2 (Adventure)', time: '03:00 PM', activity: '🍵 High tea service with rose macarons' }
+  { id: 'i-1', day: '2026-07-18', time: '14:00', activity: '🎀 Check-in to our cozy rose-themed villa' },
+  { id: 'i-2', day: '2026-07-18', time: '18:30', activity: '🍝 Evening pasta dinner & sunset cocktail bar' },
+  { id: 'i-3', day: '2026-07-19', time: '10:00', activity: '🎨 Floral painting workshop under the glass pavilion' },
+  { id: 'i-4', day: '2026-07-19', time: '15:00', activity: '🍵 High tea service with rose macarons' }
 ];
+
+// --- Theme Settings Constants & Customizer ---
+const THEMES = {
+  'soft-rose': {
+    '--bg-gradient-start': '#FFF0F5',
+    '--bg-gradient-end': '#FFE4E1',
+    '--primary-pink': '#FFB7C5',
+    '--primary-hover': '#FFA2B3',
+    '--secondary-rose': '#FF8DA1'
+  },
+  'lavender-mist': {
+    '--bg-gradient-start': '#F5F0FF',
+    '--bg-gradient-end': '#EADCF8',
+    '--primary-pink': '#D3B7FF',
+    '--primary-hover': '#C3A2FF',
+    '--secondary-rose': '#B38DFF'
+  },
+  'pastel-peach': {
+    '--bg-gradient-start': '#FFF8F0',
+    '--bg-gradient-end': '#FEEAD8',
+    '--primary-pink': '#FFCCB7',
+    '--primary-hover': '#FFAA8D',
+    '--secondary-rose': '#FF9A7A'
+  },
+  'creamy-pink': {
+    '--bg-gradient-start': '#FFF5F6',
+    '--bg-gradient-end': '#FFDFE2',
+    '--primary-pink': '#FFAEC9',
+    '--primary-hover': '#FF85A7',
+    '--secondary-rose': '#FF5E8E'
+  }
+};
+
+function applyTheme(themeName) {
+  const theme = THEMES[themeName] || THEMES['soft-rose'];
+  Object.keys(theme).forEach(key => {
+    document.documentElement.style.setProperty(key, theme[key]);
+  });
+  
+  // Update active swatch state in UI
+  document.querySelectorAll('.theme-swatch').forEach(btn => {
+    if (btn.dataset.theme === themeName) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  
+  localStorage.setItem('cherie_theme', themeName);
+}
 
 // --- Initialize App ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -60,6 +110,10 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSupabaseCredentials();
   initTabSlider();
   bindUIEvents();
+  
+  // Apply saved theme settings
+  applyTheme(localStorage.getItem('cherie_theme') || 'soft-rose');
+  
   loadData();
   
   // Set window resize handler for Tab slider offset recalculation
@@ -102,31 +156,13 @@ function updateTabSliderPosition() {
 
 // --- Supabase Integration Setup ---
 function loadSupabaseCredentials() {
-  let url = localStorage.getItem('supabase_url') || 'https://sfiaacyamsqhlclkioui.supabase.co';
-  let key = localStorage.getItem('supabase_key') || 'sb_publishable_qfRneQeqsmK4eqb35gN2Gg_Ejq7rSy-';
-  const statusEl = document.getElementById('supabaseStatus');
+  const url = 'https://sfiaacyamsqhlclkioui.supabase.co';
+  const key = 'sb_publishable_qfRneQeqsmK4eqb35gN2Gg_Ejq7rSy-';
   
   if (url && key) {
     try {
-      // Clean url if it contains trailing slashes or rest endpoints
-      let cleanUrl = url.trim();
-      if (cleanUrl.endsWith('/')) cleanUrl = cleanUrl.slice(0, -1);
-      if (cleanUrl.endsWith('/rest/v1')) cleanUrl = cleanUrl.slice(0, -8);
-      if (cleanUrl.endsWith('/')) cleanUrl = cleanUrl.slice(0, -1);
-
-      // Connect client
-      AppState.supabase = supabase.createClient(cleanUrl, key);
+      AppState.supabase = supabase.createClient(url, key);
       AppState.isSupabaseConfigured = true;
-      
-      // Update UI Status Indicators
-      statusEl.classList.remove('offline');
-      statusEl.classList.add('online');
-      statusEl.querySelector('.status-text').textContent = 'Cloud Connected';
-      statusEl.title = 'Connected to Supabase. Realtime synchronization enabled!';
-      
-      // Fill values into form inputs in settings modal
-      document.getElementById('supabaseUrl').value = cleanUrl;
-      document.getElementById('supabaseKey').value = key;
     } catch (error) {
       console.error("Supabase config error, reverting to local fallback:", error);
       setupLocalFallback();
@@ -139,11 +175,6 @@ function loadSupabaseCredentials() {
 function setupLocalFallback() {
   AppState.isSupabaseConfigured = false;
   AppState.supabase = null;
-  const statusEl = document.getElementById('supabaseStatus');
-  statusEl.classList.remove('online');
-  statusEl.classList.add('offline');
-  statusEl.querySelector('.status-text').textContent = 'Local Mode';
-  statusEl.title = 'Supabase unconfigured. Data is stored safely on this browser.';
 }
 
 // --- Data Fetching and Local Fallbacks ---
@@ -303,6 +334,30 @@ function renderBucketList() {
 }
 
 // Itinerary Schedule Timeline Render
+// Helpers for Date/Time formatting
+function formatDateHeader(dateStr) {
+  try {
+    const parts = dateStr.split('-');
+    // Create date object using local timezone to avoid off-by-one day errors
+    const date = new Date(parts[0], parts[1] - 1, parts[2]);
+    return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+function formatTimeLabel(timeStr) {
+  try {
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  } catch (e) {
+    return timeStr;
+  }
+}
+
 function renderItinerary() {
   const timelineEl = document.getElementById('itineraryTimeline');
   timelineEl.innerHTML = '';
@@ -312,19 +367,19 @@ function renderItinerary() {
     return;
   }
   
-  // Group itinerary items by Day/Date
+  // Group itinerary items by exact YYYY-MM-DD string
   const groups = {};
   AppState.itinerary.forEach(item => {
-    if (!groups[item.day]) {
-      groups[item.day] = [];
+    // Standardize to YYYY-MM-DD format to prevent duplicate split entries
+    const key = String(item.day).trim().toLowerCase();
+    if (!groups[key]) {
+      groups[key] = [];
     }
-    groups[item.day].push(item);
+    groups[key].push(item);
   });
   
-  // Sort days based on Day label structure (e.g. Day 1, Day 2...)
-  const dayKeys = Object.keys(groups).sort((a, b) => {
-    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-  });
+  // Sort days chronologically (alphabetical sort is chronological for ISO YYYY-MM-DD)
+  const dayKeys = Object.keys(groups).sort();
   
   dayKeys.forEach(day => {
     const dayGroup = document.createElement('div');
@@ -332,17 +387,17 @@ function renderItinerary() {
     
     const title = document.createElement('h4');
     title.className = 'itinerary-day-title';
-    title.textContent = day;
+    title.textContent = formatDateHeader(day);
     dayGroup.appendChild(title);
     
-    // Sort times inside each group roughly
-    const items = groups[day].sort((a, b) => a.time.localeCompare(b.time));
+    // Sort times inside each group chronologically (alphabetical HH:MM is chronological)
+    const items = groups[day].sort((a, b) => String(a.time).localeCompare(String(b.time)));
     
     items.forEach(item => {
       const itemEl = document.createElement('div');
       itemEl.className = 'itinerary-item';
       itemEl.innerHTML = `
-        <span class="itinerary-time-tag">${escapeHTML(item.time)}</span>
+        <span class="itinerary-time-tag">${formatTimeLabel(item.time)}</span>
         <div class="itinerary-details">${escapeHTML(item.activity)}</div>
         <button class="delete-itinerary-btn" data-id="${item.id}" aria-label="Delete schedule row">&times;</button>
       `;
@@ -487,10 +542,6 @@ function bindUIEvents() {
   document.getElementById('closeSettingsModal').addEventListener('click', () => {
     closeModal(settingsModal);
   });
-  
-  document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
-    closeModal(settingsModal);
-  });
 
   // Handle Drag & Drop / Selection Preview in image upload box
   const uploadArea = document.getElementById('imageUploadArea');
@@ -576,7 +627,7 @@ function bindUIEvents() {
       
       // Save memory details
       const newMemory = {
-        id: AppState.isSupabaseConfigured ? undefined : 'm-' + Date.now(),
+        id: crypto.randomUUID(),
         created_at: new Date().toISOString(),
         text_content: captionText,
         image_url: uploadedImageUrl
@@ -645,34 +696,17 @@ function bindUIEvents() {
     }
   });
 
-  // Settings Configuration Form Submission
-  const settingsForm = document.getElementById('settingsForm');
-  settingsForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const url = document.getElementById('supabaseUrl').value.trim();
-    const key = document.getElementById('supabaseKey').value.trim();
-    
-    if (url && key) {
-      localStorage.setItem('supabase_url', url);
-      localStorage.setItem('supabase_key', key);
-      loadSupabaseCredentials();
-      loadData();
-      closeModal(settingsModal);
-      alert("Config saved! Welcome to your synced pink dashboard 🌸");
-    }
+  // Theme Switcher done button click
+  document.getElementById('closeSettingsModalBtn').addEventListener('click', () => {
+    closeModal(settingsModal);
   });
 
-  // Clear credentials
-  document.getElementById('clearSettingsBtn').addEventListener('click', () => {
-    if (confirm("Delete cloud database keys? Dashboard will revert back to browser local storage.")) {
-      localStorage.removeItem('supabase_url');
-      localStorage.removeItem('supabase_key');
-      document.getElementById('supabaseUrl').value = '';
-      document.getElementById('supabaseKey').value = '';
-      setupLocalFallback();
-      loadData();
-      closeModal(settingsModal);
-    }
+  // Swatches Theme Click
+  document.querySelectorAll('.theme-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
+      const themeName = swatch.dataset.theme;
+      applyTheme(themeName);
+    });
   });
 }
 
