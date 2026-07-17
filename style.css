@@ -1238,3 +1238,90 @@ code {
     gap: 12px;
   }
 }
+
+/* --- Lightbox Modal Styles --- */
+.lightbox-container {
+  position: relative;
+  max-width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 24px 60px rgba(94, 75, 80, 0.25);
+}
+
+.lightbox-container img {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  display: block;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  font-size: 2.5rem;
+  color: #fff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  line-height: 0.5;
+  transition: transform 0.2s ease;
+}
+
+.lightbox-close:hover {
+  transform: scale(1.1);
+  color: var(--primary-pink);
+}
+
+.lightbox-caption-bar {
+  width: 100%;
+  padding: 20px;
+  background: rgba(94, 75, 80, 0.85);
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.lightbox-caption-bar p {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-style: italic;
+  margin: 0;
+  line-height: 1.4;
+  overflow-y: auto;
+  max-height: 80px;
+}
+
+.btn-lightbox-delete {
+  background: rgba(255, 77, 79, 0.2);
+  border: 1px solid rgba(255, 77, 79, 0.4);
+  color: #ff9b9b;
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease;
+}
+
+.btn-lightbox-delete:hover {
+  background: #ff4d4f;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+}

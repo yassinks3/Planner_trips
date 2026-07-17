@@ -15,7 +15,8 @@ const AppState = {
   memories: [],
   bucketList: [],
   itinerary: [],
-  activeTab: 'our-day'
+  activeTab: 'our-day',
+  critterType: 'butterflies'
 };
 
 // --- Mock Data Constants (Initial Setup) ---
@@ -63,26 +64,26 @@ const THEMES = {
     '--primary-hover': '#FFA2B3',
     '--secondary-rose': '#FF8DA1'
   },
-  'lavender-mist': {
-    '--bg-gradient-start': '#F5F0FF',
-    '--bg-gradient-end': '#EADCF8',
-    '--primary-pink': '#D3B7FF',
-    '--primary-hover': '#C3A2FF',
-    '--secondary-rose': '#B38DFF'
-  },
   'pastel-peach': {
-    '--bg-gradient-start': '#FFF8F0',
-    '--bg-gradient-end': '#FEEAD8',
-    '--primary-pink': '#FFCCB7',
-    '--primary-hover': '#FFAA8D',
-    '--secondary-rose': '#FF9A7A'
+    '--bg-gradient-start': '#FFF5F5',
+    '--bg-gradient-end': '#FFE4E1',
+    '--primary-pink': '#FF7E7E',
+    '--primary-hover': '#FF6060',
+    '--secondary-rose': '#FF5050'
   },
-  'creamy-pink': {
-    '--bg-gradient-start': '#FFF5F6',
-    '--bg-gradient-end': '#FFDFE2',
-    '--primary-pink': '#FFAEC9',
-    '--primary-hover': '#FF85A7',
-    '--secondary-rose': '#FF5E8E'
+  'lavender-mist': {
+    '--bg-gradient-start': '#F0F8FF',
+    '--bg-gradient-end': '#E6E6FA',
+    '--primary-pink': '#B0C4DE',
+    '--primary-hover': '#A2B9D6',
+    '--secondary-rose': '#8FA9C4'
+  },
+  'sky-cream': {
+    '--bg-gradient-start': '#FAF8F5',
+    '--bg-gradient-end': '#FFFDD0',
+    '--primary-pink': '#E6D7C3',
+    '--primary-hover': '#D8C3AA',
+    '--secondary-rose': '#C5AF96'
   }
 };
 
@@ -91,6 +92,17 @@ function applyTheme(themeName) {
   Object.keys(theme).forEach(key => {
     document.documentElement.style.setProperty(key, theme[key]);
   });
+  
+  // Set critter type in AppState
+  if (themeName === 'soft-rose') AppState.critterType = 'butterflies';
+  else if (themeName === 'pastel-peach') AppState.critterType = 'ladybugs';
+  else if (themeName === 'lavender-mist') AppState.critterType = 'reindeer';
+  else if (themeName === 'sky-cream') AppState.critterType = 'pigeons';
+  
+  // Clear any existing active critters
+  if (window.clearActiveCritters) {
+    window.clearActiveCritters();
+  }
   
   // Update active swatch state in UI
   document.querySelectorAll('.theme-swatch').forEach(btn => {
@@ -291,9 +303,21 @@ function renderMemories() {
     `;
     
     // Attach delete handler
-    card.querySelector('.delete-card-btn').addEventListener('click', () => {
+    card.querySelector('.delete-card-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
       deleteMemory(post.id);
     });
+    
+    // Attach lightbox zoom handler on image click
+    if (post.image_url) {
+      const imgWrapper = card.querySelector('.memory-img-wrapper');
+      imgWrapper.style.cursor = 'zoom-in';
+      imgWrapper.addEventListener('click', () => {
+        if (window.openLightbox) {
+          window.openLightbox(post.image_url, post.text_content, post.id);
+        }
+      });
+    }
     
     grid.appendChild(card);
   });
@@ -352,7 +376,8 @@ function formatTimeLabel(timeStr) {
     const h = parseInt(hours, 10);
     const ampm = h >= 12 ? 'PM' : 'AM';
     const h12 = h % 12 || 12;
-    return `${h12}:${minutes} ${ampm}`;
+    const h12Pad = h12 < 10 ? '0' + h12 : h12;
+    return `${h12Pad}:${minutes} ${ampm}`;
   } catch (e) {
     return timeStr;
   }
@@ -518,6 +543,30 @@ function bindUIEvents() {
   const memoryModal = document.getElementById('memoryModal');
   const settingsModal = document.getElementById('settingsModal');
   
+  const lightboxModal = document.getElementById('lightboxModal');
+  const lightboxImage = document.getElementById('lightboxImage');
+  const lightboxCaption = document.getElementById('lightboxCaption');
+  const lightboxDeleteBtn = document.getElementById('lightboxDeleteBtn');
+
+  window.openLightbox = (imageUrl, caption, postId) => {
+    lightboxImage.src = imageUrl;
+    lightboxCaption.textContent = caption || '';
+    
+    // Replace delete button to clear previous listeners cleanly
+    const newDeleteBtn = lightboxDeleteBtn.cloneNode(true);
+    lightboxDeleteBtn.parentNode.replaceChild(newDeleteBtn, lightboxDeleteBtn);
+    newDeleteBtn.addEventListener('click', async () => {
+      closeModal(lightboxModal);
+      await deleteMemory(postId);
+    });
+
+    openModal(lightboxModal);
+  };
+
+  document.getElementById('closeLightboxBtn').addEventListener('click', () => {
+    closeModal(lightboxModal);
+  });
+
   // Open / Close Modals
   document.getElementById('triggerAddMemory').addEventListener('click', () => {
     openModal(memoryModal);
@@ -713,12 +762,24 @@ function bindUIEvents() {
 // Modal helper controls
 function openModal(modal) {
   modal.classList.add('active');
-  document.body.style.overflow = 'hidden'; // Lock background scroll
+  document.body.style.overflow = 'hidden';
+  
+  // Dismiss on backdrop click (outside the container)
+  const onBackdropClick = (e) => {
+    if (e.target === modal) {
+      closeModal(modal);
+      modal.removeEventListener('click', onBackdropClick);
+    }
+  };
+  // Remove any stale listeners before adding fresh one
+  modal.removeEventListener('click', modal._backdropHandler);
+  modal._backdropHandler = onBackdropClick;
+  modal.addEventListener('click', onBackdropClick);
 }
 
 function closeModal(modal) {
   modal.classList.remove('active');
-  document.body.style.overflow = ''; // Unlock background scroll
+  document.body.style.overflow = '';
 }
 
 // Utility html escaping
@@ -734,7 +795,7 @@ function escapeHTML(str) {
   );
 }
 
-// --- Butterfly Canvas Particle Engine ---
+// --- Unified Canvas Critter Engine ---
 function initButterflyEngine() {
   const canvas = document.getElementById('butterflyCanvas');
   const ctx = canvas.getContext('2d');
@@ -742,132 +803,280 @@ function initButterflyEngine() {
   let width = canvas.width = window.innerWidth;
   let height = canvas.height = window.innerHeight;
   
-  // Track butterflies active
-  let butterflies = [];
-  
-  // Track gold fairy sparkles
+  let critters = [];
   let sparkles = [];
   
-  class Butterfly {
-    constructor(x, y) {
+  // Clear function that is globally accessible to clear arrays on theme swap
+  window.clearActiveCritters = () => {
+    critters = [];
+    sparkles = [];
+  };
+  
+  class Critter {
+    constructor(x, y, type) {
       this.x = x;
       this.y = y;
-      this.size = Math.random() * 8 + 10; // 10px to 18px size
-      this.colorIndex = Math.floor(Math.random() * 3); // 3 beautiful soft pink/purple shades
-      
-      // Speed properties (gentle upward drift)
-      this.vy = -(Math.random() * 0.7 + 0.6); // moving up
-      this.vx = 0; // modulated by sine drift
-      this.driftAmplitude = Math.random() * 0.8 + 0.4;
-      this.driftSpeed = Math.random() * 0.02 + 0.01;
-      this.driftPhase = Math.random() * Math.PI * 2;
-      
-      // Flapping wing properties
-      this.flapTime = Math.random() * 100;
-      this.flapSpeed = Math.random() * 0.15 + 0.15;
-      
-      // Opacity / Lifetime
+      this.type = type; // 'butterflies', 'ladybugs', 'reindeer', 'pigeons'
       this.opacity = 1;
-      this.fadeSpeed = Math.random() * 0.002 + 0.0015; // Slow elegant fade out
-      this.rotation = (Math.random() - 0.5) * 0.3; // leaning angle
+      this.fadeSpeed = Math.random() * 0.003 + 0.002;
+      this.size = Math.random() * 6 + 10;
+      
+      if (this.type === 'butterflies') {
+        this.vy = -(Math.random() * 0.7 + 0.6);
+        this.vx = 0;
+        this.driftAmplitude = Math.random() * 0.8 + 0.4;
+        this.driftSpeed = Math.random() * 0.02 + 0.01;
+        this.driftPhase = Math.random() * Math.PI * 2;
+        this.flapTime = Math.random() * 100;
+        this.flapSpeed = Math.random() * 0.15 + 0.15;
+        this.rotation = 0;
+        this.colorIndex = Math.floor(Math.random() * 3);
+      } else if (this.type === 'ladybugs') {
+        this.vy = -(Math.random() * 0.4 + 0.3);
+        this.vx = (Math.random() - 0.5) * 0.2;
+        this.walkTime = Math.random() * 100;
+        this.walkSpeed = Math.random() * 0.1 + 0.05;
+        this.size = Math.random() * 3 + 8;
+      } else if (this.type === 'reindeer') {
+        this.vy = -(Math.random() * 0.5 + 0.4);
+        this.vx = Math.random() * 0.4 + 0.3;
+        this.size = Math.random() * 5 + 10;
+      } else if (this.type === 'pigeons') {
+        this.vy = -(Math.random() * 0.8 + 0.6);
+        this.vx = -(Math.random() * 0.3 + 0.2);
+        this.flapTime = Math.random() * 100;
+        this.flapSpeed = Math.random() * 0.12 + 0.08;
+        this.size = Math.random() * 6 + 12;
+      }
     }
     
     update() {
-      // Fluttering physics
-      this.flapTime += this.flapSpeed;
-      this.y += this.vy;
-      
-      // Sine wave drift left and right
-      this.vx = Math.sin(this.flapTime * this.driftSpeed + this.driftPhase) * this.driftAmplitude;
-      this.x += this.vx;
-      
-      // Slowly rotate matching direction of drift
-      this.rotation = this.vx * 0.4;
-      
-      // Sparkle spawn trail randomly
-      if (Math.random() < 0.15) {
-        sparkles.push(new Sparkle(this.x, this.y, this.opacity));
-      }
-      
-      // Fade out
       this.opacity -= this.fadeSpeed;
+      
+      if (this.type === 'butterflies') {
+        this.flapTime += this.flapSpeed;
+        this.y += this.vy;
+        this.vx = Math.sin(this.flapTime * this.driftSpeed + this.driftPhase) * this.driftAmplitude;
+        this.x += this.vx;
+        this.rotation = this.vx * 0.4;
+        
+        if (Math.random() < 0.15) {
+          sparkles.push(new Sparkle(this.x, this.y, this.opacity, '#FFF5CD', '#F4D35E'));
+        }
+      } else if (this.type === 'ladybugs') {
+        this.walkTime += this.walkSpeed;
+        this.y += this.vy;
+        this.x += this.vx + Math.sin(this.walkTime) * 0.2;
+        
+        if (Math.random() < 0.1) {
+          sparkles.push(new Sparkle(this.x, this.y, this.opacity, '#FFE4E1', '#FF7E7E'));
+        }
+      } else if (this.type === 'reindeer') {
+        this.y += this.vy;
+        this.x += this.vx;
+        
+        if (Math.random() < 0.1) {
+          sparkles.push(new Sparkle(this.x, this.y, this.opacity, '#F0F8FF', '#B0C4DE'));
+        }
+      } else if (this.type === 'pigeons') {
+        this.flapTime += this.flapSpeed;
+        this.y += this.vy;
+        this.x += this.vx;
+        
+        if (Math.random() < 0.1) {
+          sparkles.push(new Sparkle(this.x, this.y, this.opacity, '#FAF8F5', '#E6D7C3'));
+        }
+      }
     }
     
     draw() {
-      const flapScale = Math.abs(Math.sin(this.flapTime));
-      
       ctx.save();
       ctx.translate(this.x, this.y);
-      ctx.rotate(this.rotation);
       ctx.globalAlpha = Math.max(0, this.opacity);
       
-      // Colors list
-      const wingsColors = [
-        ['rgba(255, 183, 197, 0.8)', 'rgba(255, 141, 161, 0.7)'], // Sweet cherry/rose pink
-        ['rgba(226, 202, 252, 0.8)', 'rgba(198, 163, 237, 0.7)'], // Light purple violet
-        ['rgba(255, 240, 245, 0.9)', 'rgba(255, 182, 193, 0.75)']  // White rose/lavender glow
-      ];
-      
-      const colors = wingsColors[this.colorIndex];
-      
-      // Draw Left Wing (scales horizontally simulating flap depth)
-      ctx.save();
-      ctx.scale(flapScale, 1);
-      ctx.fillStyle = colors[0];
-      ctx.beginPath();
-      // Upper Wing node
-      ctx.bezierCurveTo(-1, -1, -this.size, -this.size/2, -this.size, -this.size);
-      ctx.bezierCurveTo(-this.size, -this.size*1.4, -this.size/2, -this.size*1.3, -1, -3);
-      // Lower Wing node
-      ctx.bezierCurveTo(-1, 0, -this.size*0.7, this.size/2, -this.size*0.6, this.size);
-      ctx.bezierCurveTo(-this.size*0.5, this.size*1.2, -this.size/3, this.size, -0.5, 1.5);
-      ctx.fill();
-      ctx.restore();
-      
-      // Draw Right Wing (flipped X axis scale)
-      ctx.save();
-      ctx.scale(-flapScale, 1);
-      ctx.fillStyle = colors[1];
-      ctx.beginPath();
-      // Upper Wing node
-      ctx.bezierCurveTo(-1, -1, -this.size, -this.size/2, -this.size, -this.size);
-      ctx.bezierCurveTo(-this.size, -this.size*1.4, -this.size/2, -this.size*1.3, -1, -3);
-      // Lower Wing node
-      ctx.bezierCurveTo(-1, 0, -this.size*0.7, this.size/2, -this.size*0.6, this.size);
-      ctx.bezierCurveTo(-this.size*0.5, this.size*1.2, -this.size/3, this.size, -0.5, 1.5);
-      ctx.fill();
-      ctx.restore();
-      
-      // Butterfly Central Body
-      ctx.fillStyle = 'rgba(94, 75, 80, 0.55)';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 1.2, this.size/2.5, 0, 0, Math.PI*2);
-      ctx.fill();
-      
-      // Antennae loops
-      ctx.strokeStyle = 'rgba(94, 75, 80, 0.45)';
-      ctx.lineWidth = 0.6;
-      ctx.beginPath();
-      ctx.moveTo(-0.5, -this.size/2.5);
-      ctx.quadraticCurveTo(-2, -this.size/2.5 - 3, -3, -this.size/2.5 - 5);
-      ctx.moveTo(0.5, -this.size/2.5);
-      ctx.quadraticCurveTo(2, -this.size/2.5 - 3, 3, -this.size/2.5 - 5);
-      ctx.stroke();
+      if (this.type === 'butterflies') {
+        const flapScale = Math.abs(Math.sin(this.flapTime));
+        ctx.rotate(this.rotation);
+        
+        const wingsColors = [
+          ['rgba(255, 183, 197, 0.8)', 'rgba(255, 141, 161, 0.7)'],
+          ['rgba(226, 202, 252, 0.8)', 'rgba(198, 163, 237, 0.7)'],
+          ['rgba(255, 240, 245, 0.9)', 'rgba(255, 182, 193, 0.75)']
+        ];
+        
+        const colors = wingsColors[this.colorIndex];
+        
+        // Left Wing
+        ctx.save();
+        ctx.scale(flapScale, 1);
+        ctx.fillStyle = colors[0];
+        ctx.beginPath();
+        ctx.bezierCurveTo(-1, -1, -this.size, -this.size/2, -this.size, -this.size);
+        ctx.bezierCurveTo(-this.size, -this.size*1.4, -this.size/2, -this.size*1.3, -1, -3);
+        ctx.bezierCurveTo(-1, 0, -this.size*0.7, this.size/2, -this.size*0.6, this.size);
+        ctx.bezierCurveTo(-this.size*0.5, this.size*1.2, -this.size/3, this.size, -0.5, 1.5);
+        ctx.fill();
+        ctx.restore();
+        
+        // Right Wing
+        ctx.save();
+        ctx.scale(-flapScale, 1);
+        ctx.fillStyle = colors[1];
+        ctx.beginPath();
+        ctx.bezierCurveTo(-1, -1, -this.size, -this.size/2, -this.size, -this.size);
+        ctx.bezierCurveTo(-this.size, -this.size*1.4, -this.size/2, -this.size*1.3, -1, -3);
+        ctx.bezierCurveTo(-1, 0, -this.size*0.7, this.size/2, -this.size*0.6, this.size);
+        ctx.bezierCurveTo(-this.size*0.5, this.size*1.2, -this.size/3, this.size, -0.5, 1.5);
+        ctx.fill();
+        ctx.restore();
+        
+        // Body
+        ctx.fillStyle = 'rgba(94, 75, 80, 0.55)';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 1.2, this.size/2.5, 0, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Antennae
+        ctx.strokeStyle = 'rgba(94, 75, 80, 0.45)';
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(-0.5, -this.size/2.5);
+        ctx.quadraticCurveTo(-2, -this.size/2.5 - 3, -3, -this.size/2.5 - 5);
+        ctx.moveTo(0.5, -this.size/2.5);
+        ctx.quadraticCurveTo(2, -this.size/2.5 - 3, 3, -this.size/2.5 - 5);
+        ctx.stroke();
+      } 
+      else if (this.type === 'ladybugs') {
+        const legWiggle = Math.sin(this.walkTime * 10) * 1.5;
+        ctx.strokeStyle = 'rgba(94, 75, 80, 0.8)';
+        ctx.lineWidth = 1;
+        
+        // 6 legs
+        for (let i = -1; i <= 1; i += 2) {
+          ctx.beginPath();
+          ctx.moveTo(i * 2, -2);
+          ctx.lineTo(i * 5, -3 + legWiggle);
+          ctx.moveTo(i * 2, 0);
+          ctx.lineTo(i * 5, -legWiggle);
+          ctx.moveTo(i * 2, 2);
+          ctx.lineTo(i * 5, 3 + legWiggle);
+          ctx.stroke();
+        }
+        
+        // Shell
+        ctx.fillStyle = '#FF5C5C';
+        ctx.beginPath();
+        ctx.arc(-1, 0, this.size/2, 0, Math.PI*2);
+        ctx.arc(1, 0, this.size/2, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Spots
+        ctx.fillStyle = 'rgba(0,0,0,0.8)';
+        ctx.beginPath();
+        ctx.arc(-2, -1, 0.8, 0, Math.PI*2);
+        ctx.arc(-3, 1.5, 0.8, 0, Math.PI*2);
+        ctx.arc(2, -1, 0.8, 0, Math.PI*2);
+        ctx.arc(3, 1.5, 0.8, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Split line
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -this.size/2);
+        ctx.lineTo(0, this.size/2);
+        ctx.stroke();
+        
+        // Head
+        ctx.fillStyle = '#3A2E31';
+        ctx.beginPath();
+        ctx.arc(0, -this.size/2.2, this.size/3.8, 0, Math.PI*2);
+        ctx.fill();
+      } 
+      else if (this.type === 'reindeer') {
+        ctx.fillStyle = 'rgba(176, 196, 222, 0.85)';
+        ctx.strokeStyle = 'rgba(176, 196, 222, 0.85)';
+        ctx.lineWidth = 0.8;
+        
+        // Body
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.size/2, this.size/3.5, 0, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Neck & Head
+        ctx.beginPath();
+        ctx.moveTo(this.size/3, -this.size/6);
+        ctx.lineTo(this.size/2, -this.size/1.5);
+        ctx.lineTo(this.size/1.5, -this.size/1.4);
+        ctx.stroke();
+        
+        // Antlers
+        ctx.beginPath();
+        ctx.moveTo(this.size/2, -this.size/1.5);
+        ctx.lineTo(this.size/2.2, -this.size);
+        ctx.moveTo(this.size/2, -this.size/1.5);
+        ctx.lineTo(this.size/1.6, -this.size*0.9);
+        ctx.stroke();
+        
+        // Legs
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(-this.size/3, 0);
+        ctx.lineTo(-this.size/3 - 1, this.size/2);
+        ctx.moveTo(-this.size/6, 0);
+        ctx.lineTo(-this.size/6, this.size/2);
+        ctx.moveTo(this.size/6, 0);
+        ctx.lineTo(this.size/6, this.size/2);
+        ctx.moveTo(this.size/3, 0);
+        ctx.lineTo(this.size/3 + 1, this.size/2);
+        ctx.stroke();
+      } 
+      else if (this.type === 'pigeons') {
+        const wingFlap = Math.sin(this.flapTime);
+        ctx.fillStyle = 'rgba(250, 248, 245, 0.9)';
+        
+        // Body
+        ctx.beginPath();
+        ctx.ellipse(0, 0, this.size/2, this.size/4, -0.2, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Head
+        ctx.beginPath();
+        ctx.arc(-this.size/2, -this.size/6, this.size/5, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Beak
+        ctx.fillStyle = '#F4D35E';
+        ctx.beginPath();
+        ctx.moveTo(-this.size/2 - 2, -this.size/6 - 1);
+        ctx.lineTo(-this.size/2 - 4, -this.size/6);
+        ctx.lineTo(-this.size/2 - 2, -this.size/6 + 1);
+        ctx.fill();
+        
+        // Wing
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.beginPath();
+        ctx.moveTo(-this.size/6, -this.size/12);
+        ctx.quadraticCurveTo(0, -this.size/2 + wingFlap*this.size/2, this.size/3, -this.size/2 + wingFlap*this.size/1.5);
+        ctx.quadraticCurveTo(this.size/6, -this.size/12, 0, 0);
+        ctx.fill();
+      }
       
       ctx.restore();
     }
   }
   
-  // Sparkle details following wings
   class Sparkle {
-    constructor(x, y, alpha) {
+    constructor(x, y, alpha, fillStyle, shadowColor) {
       this.x = x + (Math.random() - 0.5) * 6;
       this.y = y + (Math.random() - 0.5) * 6;
       this.size = Math.random() * 1.5 + 0.5;
       this.opacity = alpha * 0.8;
       this.fade = Math.random() * 0.02 + 0.015;
       this.vx = (Math.random() - 0.5) * 0.2;
-      this.vy = Math.random() * 0.3 + 0.1; // slide slightly down
+      this.vy = Math.random() * 0.3 + 0.1;
+      this.fillStyle = fillStyle;
+      this.shadowColor = shadowColor;
     }
     
     update() {
@@ -879,10 +1088,9 @@ function initButterflyEngine() {
     draw() {
       ctx.save();
       ctx.globalAlpha = Math.max(0, this.opacity);
-      // Glowing golden fairy color
-      ctx.fillStyle = '#FFF5CD';
+      ctx.fillStyle = this.fillStyle;
       ctx.shadowBlur = 4;
-      ctx.shadowColor = '#F4D35E';
+      ctx.shadowColor = this.shadowColor;
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
       ctx.fill();
@@ -890,18 +1098,15 @@ function initButterflyEngine() {
     }
   }
   
-  // Canvas Loop
   function animate() {
     ctx.clearRect(0, 0, width, height);
     
-    // 1. Update and Draw Butterflies
-    butterflies = butterflies.filter(b => b.opacity > 0);
-    butterflies.forEach(b => {
-      b.update();
-      b.draw();
+    critters = critters.filter(c => c.opacity > 0);
+    critters.forEach(c => {
+      c.update();
+      c.draw();
     });
     
-    // 2. Update and Draw Gold Sparkles
     sparkles = sparkles.filter(s => s.opacity > 0);
     sparkles.forEach(s => {
       s.update();
@@ -911,42 +1116,34 @@ function initButterflyEngine() {
     requestAnimationFrame(animate);
   }
   
-  // Trigger recursive randomized spawn scheduler (every 4-8 seconds)
   function triggerBurstScheduler() {
-    const nextTimeout = Math.random() * 4000 + 4000; // 4000ms to 8000ms
-    
+    const nextTimeout = Math.random() * 4000 + 4000;
     setTimeout(() => {
-      spawnButterflyBurst();
+      spawnBurst();
       triggerBurstScheduler();
     }, nextTimeout);
   }
   
-  // Burst spawning 1 to 3 butterflies
-  function spawnButterflyBurst() {
-    const burstCount = Math.floor(Math.random() * 3) + 1; // 1 to 3
+  function spawnBurst() {
+    const type = AppState.critterType || 'butterflies';
+    const burstCount = Math.floor(Math.random() * 3) + 1;
     
-    // Pick a starting point. Choose lower 3/4 area of the page to drift nicely
     const startX = Math.random() * width;
     const startY = height * 0.6 + Math.random() * (height * 0.3);
     
     for (let i = 0; i < burstCount; i++) {
-      // Introduce slight delay or offset spacing
       const offsetX = (Math.random() - 0.5) * 40;
       const offsetY = (Math.random() - 0.5) * 40;
-      butterflies.push(new Butterfly(startX + offsetX, startY + offsetY));
+      critters.push(new Critter(startX + offsetX, startY + offsetY, type));
     }
   }
   
-  // Resize handler
   window.addEventListener('resize', () => {
     width = canvas.width = window.innerWidth;
     height = canvas.height = window.innerHeight;
   });
   
-  // Launch loop and schedule initial butterfly events
   animate();
   triggerBurstScheduler();
-  
-  // Immediately spawn a welcome butterfly group on initial load!
-  setTimeout(spawnButterflyBurst, 1500);
+  setTimeout(spawnBurst, 1500);
 }
