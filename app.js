@@ -99,9 +99,13 @@ function applyTheme(themeName) {
   else if (themeName === 'lavender-mist') AppState.critterType = 'reindeer';
   else if (themeName === 'sky-cream') AppState.critterType = 'pigeons';
   
-  // Clear any existing active critters
+  // Clear existing critters and immediately spawn new ones for feedback
   if (window.clearActiveCritters) {
     window.clearActiveCritters();
+  }
+  if (window.spawnCritterBurst) {
+    setTimeout(window.spawnCritterBurst, 200);
+    setTimeout(window.spawnCritterBurst, 800);
   }
   
   // Update active swatch state in UI
@@ -1033,32 +1037,72 @@ function initButterflyEngine() {
       } 
       else if (this.type === 'pigeons') {
         const wingFlap = Math.sin(this.flapTime);
-        ctx.fillStyle = 'rgba(250, 248, 245, 0.9)';
+        const wingUp = Math.abs(wingFlap);
         
-        // Body
+        // Body - visible blue-grey
+        ctx.fillStyle = 'rgba(130, 150, 170, 0.9)';
         ctx.beginPath();
-        ctx.ellipse(0, 0, this.size/2, this.size/4, -0.2, 0, Math.PI*2);
+        ctx.ellipse(0, 0, this.size * 0.55, this.size * 0.28, -0.15, 0, Math.PI * 2);
         ctx.fill();
         
-        // Head
+        // Tail feathers
+        ctx.fillStyle = 'rgba(100, 120, 145, 0.85)';
         ctx.beginPath();
-        ctx.arc(-this.size/2, -this.size/6, this.size/5, 0, Math.PI*2);
+        ctx.moveTo(this.size * 0.4, 0);
+        ctx.lineTo(this.size * 0.75, this.size * 0.15);
+        ctx.lineTo(this.size * 0.65, -this.size * 0.05);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Head - rounder, slightly lighter
+        ctx.fillStyle = 'rgba(160, 175, 190, 0.95)';
+        ctx.beginPath();
+        ctx.arc(-this.size * 0.5, -this.size * 0.18, this.size * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Iridescent neck patch
+        ctx.fillStyle = 'rgba(120, 180, 160, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(-this.size * 0.25, -this.size * 0.1, this.size * 0.12, this.size * 0.08, 0, 0, Math.PI * 2);
         ctx.fill();
         
         // Beak
-        ctx.fillStyle = '#F4D35E';
+        ctx.fillStyle = '#8A9BB0';
         ctx.beginPath();
-        ctx.moveTo(-this.size/2 - 2, -this.size/6 - 1);
-        ctx.lineTo(-this.size/2 - 4, -this.size/6);
-        ctx.lineTo(-this.size/2 - 2, -this.size/6 + 1);
+        ctx.moveTo(-this.size * 0.68, -this.size * 0.2);
+        ctx.lineTo(-this.size * 0.85, -this.size * 0.18);
+        ctx.lineTo(-this.size * 0.68, -this.size * 0.14);
+        ctx.closePath();
         ctx.fill();
         
-        // Wing
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        // Eye
+        ctx.fillStyle = '#2C3E50';
         ctx.beginPath();
-        ctx.moveTo(-this.size/6, -this.size/12);
-        ctx.quadraticCurveTo(0, -this.size/2 + wingFlap*this.size/2, this.size/3, -this.size/2 + wingFlap*this.size/1.5);
-        ctx.quadraticCurveTo(this.size/6, -this.size/12, 0, 0);
+        ctx.arc(-this.size * 0.55, -this.size * 0.22, this.size * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Left wing (flapping)
+        ctx.fillStyle = `rgba(115, 135, 160, ${0.75 + wingUp * 0.2})`;
+        ctx.beginPath();
+        ctx.moveTo(-this.size * 0.1, -this.size * 0.05);
+        ctx.quadraticCurveTo(
+          0, -this.size * 0.35 - wingUp * this.size * 0.35,
+          this.size * 0.35, -this.size * 0.25 - wingUp * this.size * 0.3
+        );
+        ctx.quadraticCurveTo(this.size * 0.1, -this.size * 0.05, 0, 0.05);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Wing tip darker stripe
+        ctx.fillStyle = 'rgba(70, 90, 110, 0.6)';
+        ctx.beginPath();
+        ctx.moveTo(this.size * 0.2, -this.size * 0.2 - wingUp * this.size * 0.28);
+        ctx.quadraticCurveTo(
+          this.size * 0.3, -this.size * 0.28 - wingUp * this.size * 0.35,
+          this.size * 0.35, -this.size * 0.25 - wingUp * this.size * 0.3
+        );
+        ctx.lineTo(this.size * 0.28, -this.size * 0.2 - wingUp * this.size * 0.22);
+        ctx.closePath();
         ctx.fill();
       }
       
@@ -1142,6 +1186,9 @@ function initButterflyEngine() {
     width = canvas.width = window.innerWidth;
     height = canvas.height = window.innerHeight;
   });
+  
+  // Expose spawn function globally so applyTheme can trigger immediate bursts
+  window.spawnCritterBurst = spawnBurst;
   
   animate();
   triggerBurstScheduler();
